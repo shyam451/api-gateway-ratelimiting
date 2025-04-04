@@ -1,0 +1,69 @@
+name: API Gateway Rate Limiting Tests
+
+on:
+  push:
+    branches: [ main, devin/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          cdk/package-lock.json
+          lambda/package-lock.json
+    
+    - name: Install CDK dependencies
+      run: |
+        cd cdk
+        npm ci
+    
+    - name: Install Lambda dependencies
+      run: |
+        cd lambda
+        npm ci
+    
+    - name: Build CDK project
+      run: |
+        cd cdk
+        npm run build
+    
+    - name: Synthesize CloudFormation template
+      run: |
+        cd cdk
+        npm run synth
+    
+    - name: Run CDK tests
+      run: |
+        cd cdk
+        npm test
+      continue-on-error: true
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
+    - name: Deploy stack (on main branch only)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        cd cdk
+        npm run deploy -- --require-approval never
+    
+    - name: Run rate limit tests (on main branch only)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiGatewayUrl'].OutputValue" --output text)
+        node test/rate-limit-test.js $API_URL

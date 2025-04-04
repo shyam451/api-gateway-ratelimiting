@@ -1,0 +1,36 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# CDK output
+cdk.out/
+.cdk.staging/
+
+# TypeScript
+*.js
+*.d.ts
+!jest.config.js
+*.tsbuildinfo
+
+# Lambda build artifacts
+/lambda/dist/
+
+# Test results
+test-results.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

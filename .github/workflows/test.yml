@@ -64,7 +64,16 @@ jobs:
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
       run: |
         cd cdk
-        npx cdk deploy --require-approval never
+        # Synthesize CloudFormation template
+        npx cdk synth
+        
+        # Bootstrap manually without using CDK bootstrap
+        echo "Deploying CloudFormation template directly..."
+        aws cloudformation deploy \
+          --template-file cdk.out/ApiGatewayRateLimitingStack.template.json \
+          --stack-name ApiGatewayRateLimitingStack \
+          --capabilities CAPABILITY_IAM \
+          --no-fail-on-empty-changeset
         
         # Get API Gateway URL for testing
         API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiGatewayUrl'].OutputValue" --output text)

@@ -9,4 +9,7 @@ new ApiGatewayRateLimitingStack(app, 'ApiGatewayRateLimitingStack', {
     account: '641002720432', 
     region: 'us-east-1'
   },
+  synthesizer: new cdk.DefaultStackSynthesizer({
+    generateBootstrapVersionRule: false,
+  }),
 });

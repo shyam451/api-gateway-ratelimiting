@@ -51,20 +51,20 @@ jobs:
     
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     
     - name: Deploy stack
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
       run: |
         cd cdk
         npm run deploy -- --require-approval never
     
     - name: Run rate limit tests
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
       run: |
         API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiGatewayUrl'].OutputValue" --output text)
         node test/rate-limit-test.js $API_URL

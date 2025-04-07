@@ -1,0 +1,180 @@
+name: Terraform API Gateway Rate Limiting Tests
+
+on:
+  push:
+    branches: [ main, devin/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.7
+    
+    - name: Prepare Lambda function
+      run: |
+        cd lambda
+        zip -r function.zip index.js
+    
+    - name: Terraform Init
+      run: |
+        cd terraform
+        terraform init
+    
+    - name: Terraform Format
+      run: |
+        cd terraform
+        terraform fmt -check
+    
+    - name: Terraform Validate
+      run: |
+        cd terraform
+        terraform validate
+    
+    - name: Terraform Plan
+      run: |
+        cd terraform
+        terraform plan -out=tfplan
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        TF_VAR_lambda_role_arn: "arn:aws:iam::641002720432:role/ec2-role"
+    
+    - name: Verify Terraform Plan
+      run: |
+        cd terraform
+        terraform show -json tfplan > tfplan.json
+        
+        # Check if rate limiting is configured
+        if grep -q "throttling_rate_limit" tfplan.json && grep -q "throttling_burst_limit" tfplan.json; then
+          echo "✅ Rate limiting configuration found in Terraform plan"
+          RATE_LIMIT=$(grep -o '"throttling_rate_limit":[^,}]*' tfplan.json | head -1 | cut -d':' -f2)
+          BURST_LIMIT=$(grep -o '"throttling_burst_limit":[^,}]*' tfplan.json | head -1 | cut -d':' -f2)
+          echo "Rate limit: $RATE_LIMIT requests per second"
+          echo "Burst limit: $BURST_LIMIT requests"
+        else
+          echo "❌ Rate limiting configuration not found in Terraform plan"
+          exit 1
+        fi
+        
+        # Check if Lambda function is configured
+        if grep -q "aws_lambda_function" tfplan.json; then
+          echo "✅ Lambda function configuration found in Terraform plan"
+        else
+          echo "❌ Lambda function configuration not found in Terraform plan"
+          exit 1
+        fi
+        
+        # Check if API Gateway is configured
+        if grep -q "aws_api_gateway_rest_api" tfplan.json; then
+          echo "✅ API Gateway configuration found in Terraform plan"
+        else
+          echo "❌ API Gateway configuration not found in Terraform plan"
+          exit 1
+        fi
+        
+        echo "All checks passed! The Terraform plan contains the required configurations."
+    
+    - name: Terraform Apply
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
+      run: |
+        cd terraform
+        terraform apply -auto-approve tfplan
+        
+        # Get API Gateway URL for testing
+        API_URL=$(terraform output -raw api_gateway_url)
+        echo "API_URL=$API_URL" >> $GITHUB_ENV
+        echo "API Gateway URL: $API_URL"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    
+    - name: Set up mock API server for testing
+      if: github.event_name != 'push' || (github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/devin/'))
+      run: |
+        echo "Setting up mock API server for rate limit testing..."
+        cd lambda
+        npm init -y
+        npm install express express-rate-limit --save
+        
+        # Create a simple Express server with rate limiting
+        cat > server.js << 'EOL'
+        const express = require('express');
+        const rateLimit = require('express-rate-limit');
+        const app = express();
+        
+        // Configure rate limiter: max 100 requests per second
+        const limiter = rateLimit({
+          windowMs: 1000, // 1 second
+          max: 100, // Limit each IP to 100 requests per windowMs
+          standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+          legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+          message: { 
+            status: 429, 
+            message: 'Too many requests, please try again later.' 
+          }
+        });
+        
+        // Apply the rate limiting middleware to all requests
+        app.use(limiter);
+        
+        // Define a simple endpoint
+        app.get('/test', (req, res) => {
+          res.json({
+            message: 'Hello from Lambda!',
+            timestamp: new Date().toISOString(),
+            requestId: Math.random().toString(36).substring(2, 15),
+          });
+        });
+        
+        // Start server
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, () => {
+          console.log(`Mock API server running on port ${PORT}`);
+        });
+        EOL
+        
+        # Start the server in background
+        node server.js &
+        echo $! > server.pid
+        
+        # Wait for server to start
+        sleep 3
+        
+        # Set API URL for testing
+        echo "API_URL=http://localhost:3000/test" >> $GITHUB_ENV
+        echo "Mock API server started at http://localhost:3000/test"
+    
+    - name: Run rate limit tests
+      run: |
+        echo "Using API URL: ${{ env.API_URL }}"
+        node test/rate-limit-test.js ${{ env.API_URL }}
+    
+    - name: Clean up mock server
+      if: always() && (github.event_name != 'push' || (github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/devin/')))
+      run: |
+        if [ -f lambda/server.pid ]; then
+          kill $(cat lambda/server.pid) || true
+          rm lambda/server.pid
+        fi
+    
+    - name: Terraform Destroy
+      if: always() && github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
+      run: |
+        cd terraform
+        terraform destroy -auto-approve
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

@@ -60,25 +60,24 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     
-    - name: Deploy CDK Stack
+    - name: Deploy CloudFormation Stack
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
       run: |
-        cd cdk
-        # Synthesize CloudFormation template
-        npx cdk synth
-        
-        # Bootstrap manually without using CDK bootstrap
-        echo "Deploying CloudFormation template directly..."
+        echo "Deploying simplified CloudFormation template directly..."
         aws cloudformation deploy \
-          --template-file cdk.out/ApiGatewayRateLimitingStack.template.json \
+          --template-file template.yaml \
           --stack-name ApiGatewayRateLimitingStack \
-          --capabilities CAPABILITY_IAM \
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
           --no-fail-on-empty-changeset
         
         # Get API Gateway URL for testing
-        API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiGatewayUrl'].OutputValue" --output text)
+        API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
         echo "API_URL=$API_URL" >> $GITHUB_ENV
         echo "API Gateway URL: $API_URL"
+        
+        # Verify AWS credentials
+        echo "Verifying AWS credentials..."
+        aws sts get-caller-identity
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

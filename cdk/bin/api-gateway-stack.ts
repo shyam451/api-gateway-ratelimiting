@@ -6,7 +6,7 @@ import { ApiGatewayRateLimitingStack } from '../lib/api-gateway-rate-limiting-st
 const app = new cdk.App();
 new ApiGatewayRateLimitingStack(app, 'ApiGatewayRateLimitingStack', {
   env: { 
-    account: process.env.CDK_DEFAULT_ACCOUNT, 
-    region: process.env.CDK_DEFAULT_REGION || 'us-east-1'
+    account: '641002720432', 
+    region: 'us-east-1'
   },
 });

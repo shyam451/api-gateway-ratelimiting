@@ -26,6 +26,7 @@ jobs:
       run: |
         cd cdk
         npm ci
+        npm install -g aws-cdk
     
     - name: Install Lambda dependencies
       run: |

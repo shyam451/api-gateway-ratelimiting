@@ -1,6 +1,6 @@
 # API Gateway Rate Limiting POC
 
-This project demonstrates AWS API Gateway with rate limiting enabled. It uses Terraform for infrastructure code and deployment.
+This project demonstrates AWS API Gateway with rate limiting enabled. It uses AWS CDK for infrastructure code and deployment.
 
 ## Features
 
@@ -22,11 +22,11 @@ The architecture consists of:
 
 - AWS CLI configured with appropriate credentials
 - Node.js and npm installed
-- Terraform installed locally (for local testing)
+- AWS CDK installed globally (`npm install -g aws-cdk`)
 
 ## Project Structure
 
-- `/terraform` - Terraform infrastructure code
+- `/cdk` - AWS CDK infrastructure code
 - `/lambda` - Lambda function code
 - `/test` - Test scripts for verifying rate limiting
 - `/.github/workflows` - GitHub Actions workflow configuration
@@ -35,20 +35,19 @@ The architecture consists of:
 
 ### Local Deployment
 
-1. Prepare the Lambda function:
+1. Install dependencies and build the CDK project:
 
 ```bash
-cd lambda
-zip -r function.zip index.js
-cd ..
+cd cdk
+npm ci
+npm run build
 ```
 
-2. Initialize and apply Terraform:
+2. Deploy the CDK stack:
 
 ```bash
-cd terraform
-terraform init
-terraform apply
+cd cdk
+cdk deploy
 ```
 
 3. Note the API Gateway URL from the output.
@@ -56,10 +55,11 @@ terraform apply
 ### GitHub Actions Deployment
 
 The project includes a GitHub Actions workflow that automatically:
-1. Validates the Terraform configuration
-2. Deploys the infrastructure to AWS
-3. Runs tests to verify rate limiting functionality
-4. Destroys the infrastructure after testing
+1. Builds and synthesizes the CDK stack
+2. Validates the CloudFormation template
+3. Deploys the infrastructure to AWS (when pushing to main or devin/* branches)
+4. Runs tests to verify rate limiting functionality
+5. Cleans up resources after testing
 
 To use GitHub Actions:
 1. Add AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as repository secrets
@@ -83,3 +83,15 @@ The test script will send 150 requests in parallel and report how many were succ
 - Burst limit: 200 requests
 
 This configuration allows for handling traffic spikes while still enforcing the overall rate limit.
+
+## CDK Implementation Details
+
+The CDK implementation uses TypeScript to define the infrastructure:
+
+- Creates an API Gateway REST API
+- Configures rate limiting using the `throttle` method on API Gateway methods
+- Deploys a Lambda function as the backend
+- Sets up IAM permissions for the Lambda function
+- Configures the integration between API Gateway and Lambda
+
+The rate limiting is implemented at the API Gateway level, which provides a robust solution for controlling the number of requests that can be processed.

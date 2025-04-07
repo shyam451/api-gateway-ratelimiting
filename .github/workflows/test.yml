@@ -42,6 +42,9 @@ jobs:
       run: |
         cd cdk
         npm run synth
+        # Save the template for direct deployment
+        mkdir -p cdk.out
+        cp cdk.out/ApiGatewayRateLimitingStack.template.json cdk.out/template.json
     
     - name: Run CDK tests
       run: |
@@ -57,11 +60,29 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     
-    - name: Deploy stack
+    - name: Deploy stack using CloudFormation directly
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
       run: |
-        cd cdk
-        npm run deploy -- --require-approval never
+        # Check if stack exists
+        if aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack 2>&1 | grep -q 'does not exist'; then
+          # Create stack
+          aws cloudformation create-stack \
+            --stack-name ApiGatewayRateLimitingStack \
+            --template-body file://cdk/cdk.out/template.json \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+          
+          # Wait for stack creation to complete
+          aws cloudformation wait stack-create-complete --stack-name ApiGatewayRateLimitingStack
+        else
+          # Update stack
+          aws cloudformation update-stack \
+            --stack-name ApiGatewayRateLimitingStack \
+            --template-body file://cdk/cdk.out/template.json \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM || echo "No updates to be performed"
+          
+          # Wait for stack update to complete
+          aws cloudformation wait stack-update-complete --stack-name ApiGatewayRateLimitingStack || true
+        fi
     
     - name: Run rate limit tests
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))

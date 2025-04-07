@@ -12,8 +12,8 @@ if (!apiUrl) {
 const url = new URL(apiUrl);
 const options = {
   hostname: url.hostname,
-  port: url.protocol === 'https:' ? 443 : 80,
-  path: url.pathname + '/test',
+  port: url.protocol === 'https:' ? 443 : (url.port ? parseInt(url.port) : 80),
+  path: url.pathname,
   method: 'GET',
 };
 

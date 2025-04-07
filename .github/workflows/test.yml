@@ -83,9 +83,17 @@ jobs:
           # Wait for stack update to complete
           aws cloudformation wait stack-update-complete --stack-name ApiGatewayRateLimitingStack || true
         fi
+        
+        # Get API Gateway ID using AWS CLI
+        API_ID=$(aws apigateway get-rest-apis --query "items[?name=='Rate Limited API'].id" --output text)
+        echo "API_ID=$API_ID" >> $GITHUB_ENV
+        
+        # Construct API URL manually
+        echo "API_URL=https://$API_ID.execute-api.us-east-1.amazonaws.com/prod" >> $GITHUB_ENV
+        echo "API URL: https://$API_ID.execute-api.us-east-1.amazonaws.com/prod"
     
     - name: Run rate limit tests
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
       run: |
-        API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiGatewayUrl'].OutputValue" --output text)
-        node test/rate-limit-test.js $API_URL
+        echo "Using API URL: ${{ env.API_URL }}"
+        node test/rate-limit-test.js ${{ env.API_URL }}

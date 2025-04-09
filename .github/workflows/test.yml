@@ -80,8 +80,21 @@ jobs:
         }
         
         # Get API Gateway URL for testing
-        API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
+        API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiGatewayUrl'].OutputValue" --output text)
         echo "API Gateway URL: $API_URL"
+        
+        # If API URL is empty, try alternative output key
+        if [ -z "$API_URL" ]; then
+          API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='RateLimitedApiEndpoint7695FBF8'].OutputValue" --output text)
+          echo "Using alternative API Gateway URL: $API_URL"
+        fi
+        
+        # Add test path if needed
+        if [ ! -z "$API_URL" ] && [[ "$API_URL" != *"/test" ]]; then
+          API_URL="${API_URL}test"
+          echo "Final API URL with test path: $API_URL"
+        fi
+        
         echo "API_URL=$API_URL" >> $GITHUB_ENV
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

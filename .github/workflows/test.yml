@@ -60,24 +60,37 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     
-    - name: Attempt AWS deployment (optional)
+    - name: Attempt AWS deployment
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
-      continue-on-error: true
       run: |
         echo "Verifying AWS credentials..."
         aws sts get-caller-identity
         
-        echo "Attempting CloudFormation deployment (optional step)..."
+        echo "Checking AWS account permissions..."
+        aws iam get-user || echo "Unable to get user info"
+        
+        echo "Deploying with CloudFormation directly..."
         # Package Lambda code
         cd lambda
         zip -r function.zip index.js
         
-        # Deploy CloudFormation template
+        # Create S3 bucket for Lambda code if it doesn't exist
+        BUCKET_NAME="api-gateway-rate-limiting-lambda-$(date +%s)"
+        aws s3 mb s3://$BUCKET_NAME || echo "Bucket creation failed, continuing..."
+        
+        # Upload Lambda code to S3
+        aws s3 cp function.zip s3://$BUCKET_NAME/function.zip
+        
+        # Update template with S3 location
+        sed -i "s|ZipFile: |S3Bucket: $BUCKET_NAME, S3Key: function.zip # |g" ../template.yaml
+        
+        # Deploy CloudFormation template with detailed error reporting
         aws cloudformation deploy \
           --template-file ../template.yaml \
           --stack-name ApiGatewayRateLimitingStack \
           --capabilities CAPABILITY_IAM \
-          --no-fail-on-empty-changeset
+          --no-fail-on-empty-changeset \
+          --debug
         
         # Get API Gateway URL for testing
         API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
@@ -87,6 +100,12 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: us-east-1
+      
+    - name: Fallback to mock server if AWS deployment fails
+      if: failure() && (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/')))
+      run: |
+        echo "AWS deployment failed. Falling back to mock server for testing..."
+        echo "API_URL=http://localhost:3000/test" >> $GITHUB_ENV
         
     - name: Use mock server for testing
       run: |

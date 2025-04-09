@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-04-09T15:28:53.539Z",
+  "apiUrl": "https://eeefxwoqf1.execute-api.us-east-1.amazonaws.com/prod/test",
+  "totalRequests": 300,
+  "successCount": 295,
+  "throttledCount": 0,
+  "otherErrorCount": 5,
+  "burstPhase": {
+    "requests": 200,
+    "successful": 195,
+    "throttled": 0,
+    "errors": 5
+  },
+  "steadyPhase": {
+    "requests": 100,
+    "successful": 100,
+    "throttled": 0,
+    "errors": 0
+  },
+  "errorSamples": [
+    {
+      "statusCode": 500,
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "36",
+        "connection": "keep-alive",
+        "date": "Wed, 09 Apr 2025 15:28:44 GMT",
+        "x-amz-apigw-id": "IwvHEFHkoAMEPFQ=",
+        "x-amzn-requestid": "853ad49d-5d0c-4134-a980-65094fa78967",
+        "x-amzn-errortype": "InternalServerErrorException",
+        "x-cache": "Error from cloudfront",
+        "via": "1.1 4f94cdb07d6f082a79d5338a94655816.cloudfront.net (CloudFront)",
+        "x-amz-cf-pop": "SEA900-P5",
+        "x-amz-cf-id": "t1PtGLFUZzxa5ouQaEh3mCM9vsSqwi3l8Z3--cdkBYNH3g-DhekE_g=="
+      },
+      "data": "{\"message\": \"Internal server error\"}",
+      "requestIndex": 16
+    },
+    {
+      "statusCode": 500,
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "36",
+        "connection": "keep-alive",
+        "date": "Wed, 09 Apr 2025 15:28:44 GMT",
+        "x-amz-apigw-id": "IwvHEGX_IAMEBFw=",
+        "x-amzn-requestid": "1e67185f-58fe-4e77-abcc-d4f3980ae4f3",
+        "x-amzn-errortype": "InternalServerErrorException",
+        "x-cache": "Error from cloudfront",
+        "via": "1.1 da6670755d0ba8704d688c4b47162c2e.cloudfront.net (CloudFront)",
+        "x-amz-cf-pop": "SEA900-P5",
+        "x-amz-cf-id": "MZhsqrfOvAXb77gnq7o9Y_LvonohDUtkBJ59p6ysf532Ggc5Uat4cA=="
+      },
+      "data": "{\"message\": \"Internal server error\"}",
+      "requestIndex": 18
+    },
+    {
+      "statusCode": 500,
+      "headers": {
+        "content-type": "application/json",
+        "content-length": "36",
+        "connection": "keep-alive",
+        "date": "Wed, 09 Apr 2025 15:28:44 GMT",
+        "x-amz-apigw-id": "IwvHEFHqIAMEPFQ=",
+        "x-amzn-requestid": "14c66a21-a1a6-4201-8665-5f157258365e",
+        "x-amzn-errortype": "InternalServerErrorException",
+        "x-cache": "Error from cloudfront",
+        "via": "1.1 6ce71f2acae797baa15cbac520b237a2.cloudfront.net (CloudFront)",
+        "x-amz-cf-pop": "SEA900-P5",
+        "x-amz-cf-id": "hu6wBkvxkr90D6VlPqlJyf4ukgnIwEjf-q8qiy3Y86gAFOGP8xPu0A=="
+      },
+      "data": "{\"message\": \"Internal server error\"}",
+      "requestIndex": 19
+    }
+  ]
+}

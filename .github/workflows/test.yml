@@ -81,12 +81,13 @@ jobs:
         # Upload Lambda code to S3
         aws s3 cp function.zip s3://$BUCKET_NAME/function.zip
         
-        # Update template with S3 location
-        sed -i "s|ZipFile: |S3Bucket: $BUCKET_NAME, S3Key: function.zip # |g" ../template.yaml
+        # Create a modified template with S3 location
+        cat ../template.yaml | sed 's|ZipFile: |ZipFile: PLACEHOLDER_TO_REPLACE|g' > ../modified-template.yaml
+        cat ../modified-template.yaml | sed "s|PLACEHOLDER_TO_REPLACE|\\n        # S3Bucket: $BUCKET_NAME\\n        # S3Key: function.zip\\n        |g" > ../final-template.yaml
         
         # Deploy CloudFormation template with detailed error reporting
         aws cloudformation deploy \
-          --template-file ../template.yaml \
+          --template-file ../final-template.yaml \
           --stack-name ApiGatewayRateLimitingStack \
           --capabilities CAPABILITY_IAM \
           --no-fail-on-empty-changeset \

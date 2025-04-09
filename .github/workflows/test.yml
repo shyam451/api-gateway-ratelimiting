@@ -60,7 +60,7 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     
-    - name: Attempt AWS deployment
+    - name: Deploy with CDK
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
       run: |
         echo "Verifying AWS credentials..."
@@ -69,39 +69,9 @@ jobs:
         echo "Checking AWS account permissions..."
         aws iam get-user || echo "Unable to get user info"
         
-        echo "Deploying with CloudFormation directly..."
-        # Package Lambda code
-        cd lambda
-        zip -r function.zip index.js
-        
-        # Create S3 bucket for Lambda code if it doesn't exist
-        BUCKET_NAME="api-gateway-rate-limiting-lambda-$(date +%s)"
-        aws s3 mb s3://$BUCKET_NAME || echo "Bucket creation failed, continuing..."
-        
-        # Upload Lambda code to S3
-        aws s3 cp function.zip s3://$BUCKET_NAME/function.zip
-        
-        # Create a modified template with S3 location
-        cat ../template.yaml | sed 's|ZipFile: |ZipFile: PLACEHOLDER_TO_REPLACE|g' > ../modified-template.yaml
-        cat ../modified-template.yaml | sed "s|PLACEHOLDER_TO_REPLACE|\\n        # S3Bucket: $BUCKET_NAME\\n        # S3Key: function.zip\\n        |g" > ../final-template.yaml
-        
-        # Check if stack exists and is in ROLLBACK_COMPLETE state
-        STACK_STATUS=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "STACK_NOT_FOUND")
-        
-        if [ "$STACK_STATUS" == "ROLLBACK_COMPLETE" ]; then
-          echo "Stack is in ROLLBACK_COMPLETE state. Deleting stack before deployment..."
-          aws cloudformation delete-stack --stack-name ApiGatewayRateLimitingStack
-          echo "Waiting for stack deletion to complete..."
-          aws cloudformation wait stack-delete-complete --stack-name ApiGatewayRateLimitingStack
-        fi
-        
-        # Deploy CloudFormation template with detailed error reporting
-        aws cloudformation deploy \
-          --template-file ../final-template.yaml \
-          --stack-name ApiGatewayRateLimitingStack \
-          --capabilities CAPABILITY_IAM \
-          --no-fail-on-empty-changeset \
-          --debug
+        echo "Deploying with CDK..."
+        cd cdk
+        npm run cdk deploy -- --require-approval never
         
         # Get API Gateway URL for testing
         API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)

@@ -68,16 +68,16 @@ To use GitHub Actions:
 
 ## Testing Rate Limiting
 
-### Basic Rate Limit Testing
+### AWS API Gateway Testing
 
-Run the basic test script to verify rate limiting:
+Run the AWS API Gateway test script to verify rate limiting and burst capacity:
 
 ```bash
 cd test
-node rate-limit-test.js <API_GATEWAY_URL>
+node aws-api-gateway-test.js <API_GATEWAY_URL>
 ```
 
-The test script will send 150 requests in parallel and report how many were successful vs. throttled.
+The test script will send 200 requests in quick succession to test the burst capacity, followed by 100 more requests to test the steady-state behavior.
 
 ### Burst Capacity Testing
 

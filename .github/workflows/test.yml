@@ -75,8 +75,8 @@ jobs:
         
         echo "Deploying with CDK..."
         npm run cdk deploy -- --require-approval never || {
-          echo "CDK deployment failed, will use mock server for testing"
-          exit 0  # Exit with success to allow fallback to mock server
+          echo "CDK deployment failed"
+          exit 1  # Exit with failure if deployment fails
         }
         
         # Get API Gateway URL for testing
@@ -101,16 +101,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: us-east-1
       
-    - name: Fallback to mock server if AWS deployment fails
-      if: failure() && (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/')))
-      run: |
-        echo "AWS deployment failed. Falling back to mock server for testing..."
-        echo "API_URL=http://localhost:3000/test" >> $GITHUB_ENV
-        
-    - name: Use mock server for testing
-      run: |
-        echo "Using mock server for testing rate limiting functionality..."
-        echo "API_URL=http://localhost:3000/test" >> $GITHUB_ENV
+    # No fallback to mock server - we only test against the real API Gateway
     
     - name: Verify CDK template contains rate limiting configuration
       run: |
@@ -154,81 +145,17 @@ jobs:
         
         echo "Verification complete. The CDK template contains the required configurations."
         
-        # Set mock API URL for testing
-        echo "API_URL=http://localhost:3000/test" >> $GITHUB_ENV
-    
-    - name: Set up mock API server for testing
-      run: |
-        echo "Setting up mock API server for rate limit testing..."
-        cd lambda
-        npm init -y
-        npm install express express-rate-limit --save
-        
-        # Create a simple Express server with rate limiting
-        cat > server.js << 'EOL'
-        const express = require('express');
-        const rateLimit = require('express-rate-limit');
-        const app = express();
-        
-        // Configure rate limiter: max 100 requests per minute
-        const limiter = rateLimit({
-          windowMs: 1000, // 1 second
-          max: 100, // Limit each IP to 100 requests per windowMs
-          standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-          legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-          message: { 
-            status: 429, 
-            message: 'Too many requests, please try again later.' 
-          }
-        });
-        
-        // Apply the rate limiting middleware to all requests
-        app.use(limiter);
-        
-        // Define a simple endpoint
-        app.get('/test', (req, res) => {
-          res.json({
-            message: 'Hello from Lambda!',
-            timestamp: new Date().toISOString(),
-            requestId: Math.random().toString(36).substring(2, 15),
-          });
-        });
-        
-        // Start server
-        const PORT = process.env.PORT || 3000;
-        app.listen(PORT, () => {
-          console.log(`Mock API server running on port ${PORT}`);
-        });
-        EOL
-        
-        # Start the server in background
-        node server.js &
-        echo $! > server.pid
-        
-        # Wait for server to start
-        sleep 3
-        
-        # Set API URL for testing
-        echo "API_URL=http://localhost:3000/test" >> $GITHUB_ENV
-        echo "Mock API server started at http://localhost:3000/test"
-        
     - name: Run rate limit tests
       run: |
-        echo "Using API URL: ${{ env.API_URL }}"
+        echo "Using API Gateway URL: ${{ env.API_URL }}"
         
-        # Check if we have a real API Gateway URL from deployment
+        # Only test against the real AWS API Gateway
         if [[ "${{ env.API_URL }}" == *"execute-api.us-east-1.amazonaws.com"* ]]; then
-          echo "Testing against real AWS API Gateway: ${{ env.API_URL }}"
+          echo "Testing against AWS API Gateway: ${{ env.API_URL }}"
           node test/aws-api-gateway-test.js ${{ env.API_URL }}
         else
-          echo "Testing against mock server: ${{ env.API_URL }}"
-          node test/rate-limit-test.js ${{ env.API_URL }}
+          echo "Error: No valid API Gateway URL found. Tests cannot run."
+          exit 1
         fi
         
-    - name: Clean up mock server
-      if: always()
-      run: |
-        if [ -f lambda/server.pid ]; then
-          kill $(cat lambda/server.pid) || true
-          rm lambda/server.pid
-        fi
+    # No mock server cleanup needed

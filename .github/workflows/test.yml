@@ -52,10 +52,31 @@ jobs:
         npm test
       continue-on-error: true
     
-    - name: Skip AWS deployment
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
+    - name: Verify AWS Credentials
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/devin/'))
       run: |
-        echo "Skipping AWS deployment due to credential issues. Using mock server for testing."
-        echo "API_URL=http://localhost:3000/test" >> $GITHUB_ENV
+        echo "Verifying AWS credentials..."
+        aws sts get-caller-identity
+        
+        # Deploy CDK stack
+        cd cdk
+        npm run cdk deploy -- --require-approval never
+        
+        # Get API Gateway URL for testing
+        API_URL=$(aws cloudformation describe-stacks --stack-name ApiGatewayRateLimitingStack --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" --output text)
+        echo "API_URL=$API_URL" >> $GITHUB_ENV
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: us-east-1
     
     - name: Verify CDK template contains rate limiting configuration
       run: |

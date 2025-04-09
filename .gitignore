@@ -12,9 +12,10 @@ cdk.out/
 *.js
 *.d.ts
 !jest.config.js
-!server.js
 !lambda/index.js
 !test/rate-limit-test.js
+!test/aws-api-gateway-test.js
+!test/python_rate_limit_test.py
 *.tsbuildinfo
 
 # Lambda build artifacts

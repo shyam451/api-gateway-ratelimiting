@@ -1,0 +1,20 @@
+{
+  "name": "api-gateway-ratelimiting",
+  "version": "1.0.0",
+  "description": "This project demonstrates AWS API Gateway with rate limiting enabled. It uses AWS CDK for infrastructure code and deployment.",
+  "main": "server.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0"
+  }
+}

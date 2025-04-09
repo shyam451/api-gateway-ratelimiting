@@ -215,7 +215,15 @@ jobs:
     - name: Run rate limit tests
       run: |
         echo "Using API URL: ${{ env.API_URL }}"
-        node test/rate-limit-test.js ${{ env.API_URL }}
+        
+        # Check if we have a real API Gateway URL from deployment
+        if [[ "${{ env.API_URL }}" == *"execute-api.us-east-1.amazonaws.com"* ]]; then
+          echo "Testing against real AWS API Gateway: ${{ env.API_URL }}"
+          node test/aws-api-gateway-test.js ${{ env.API_URL }}
+        else
+          echo "Testing against mock server: ${{ env.API_URL }}"
+          node test/rate-limit-test.js ${{ env.API_URL }}
+        fi
         
     - name: Clean up mock server
       if: always()

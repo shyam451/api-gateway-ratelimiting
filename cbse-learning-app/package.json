@@ -1,0 +1,17 @@
+{
+  "name": "cbse-learning-app",
+  "version": "1.0.0",
+  "description": "CBSE Grade 5 Learning App - AI-powered question generation from textbook scans",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "better-sqlite3": "^11.7.0",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^11.0.0"
+  }
+}

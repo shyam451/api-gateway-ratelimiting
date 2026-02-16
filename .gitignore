@@ -16,6 +16,7 @@ cdk.out/
 !test/rate-limit-test.js
 !test/aws-api-gateway-test.js
 !test/python_rate_limit_test.py
+!cbse-learning-app/**
 *.tsbuildinfo
 
 # Lambda build artifacts

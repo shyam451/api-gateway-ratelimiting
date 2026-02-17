@@ -1,0 +1,41 @@
+INVOICE
+
+Invoice Number: INV-2024-0847
+Date: January 15, 2024
+Due Date: February 14, 2024
+
+From:
+  TechServices Inc.
+  123 Innovation Drive
+  San Francisco, CA 94105
+  contact@techservices.example.com
+
+Bill To:
+  Acme Corporation
+  456 Business Avenue
+  New York, NY 10001
+  billing@acme.example.com
+
+Description                    Qty    Unit Price    Amount
+--------------------------------------------------------------
+Cloud Infrastructure Setup      1      $5,000.00    $5,000.00
+API Development (hours)        40        $150.00    $6,000.00
+Database Migration              1      $3,000.00    $3,000.00
+Security Audit                  1      $2,500.00    $2,500.00
+Monthly Monitoring (3 months)   3        $500.00    $1,500.00
+
+--------------------------------------------------------------
+                              Subtotal:             $18,000.00
+                              Tax (8.5%):            $1,530.00
+                              Total Due:            $19,530.00
+
+Payment Terms: Net 30
+Payment Method: Wire Transfer
+
+Bank Details:
+  Bank: First National Bank
+  Account: 1234567890
+  Routing: 021000021
+
+Notes:
+  Thank you for your business. Please remit payment within 30 days.

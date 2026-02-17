@@ -18,8 +18,9 @@ cdk.out/
 !test/python_rate_limit_test.py
 *.tsbuildinfo
 
-# Lambda build artifacts
+# Build artifacts
 /lambda/dist/
+/document-extraction-agent/dist/
 
 # Test results
 test-results.json

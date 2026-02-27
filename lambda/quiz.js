@@ -2,7 +2,11 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Support both API-key (x-api-key) and Bearer-token (Authorization) auth
+const authOpts = process.env.ANTHROPIC_AUTH_TOKEN
+  ? { authToken: process.env.ANTHROPIC_AUTH_TOKEN }
+  : { apiKey: process.env.ANTHROPIC_API_KEY };
+const client = new Anthropic(authOpts);
 const MODEL = 'claude-sonnet-4-6';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -233,8 +237,8 @@ exports.handler = async (event) => {
   }
 
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return jsonResponse(500, { error: 'ANTHROPIC_API_KEY environment variable is not set.' });
+    if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
+      return jsonResponse(500, { error: 'Set ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN before starting the server.' });
     }
 
     if (method === 'GET' && /\/quiz\/question/.test(path)) {

@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@types/aws-lambda": "^8.10.148",
     "@types/node": "^22.14.0"
   }
